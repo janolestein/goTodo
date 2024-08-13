@@ -2,30 +2,47 @@ package main
 
 import (
 	"fmt"
-	"os"
-
+	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"os"
 )
 
-type model struct {
-	choices  []string
-	cursor   int
-	selected map[int]struct{}
+var docStyle = lipgloss.NewStyle().Margin(1, 2)
+
+type item struct {
+	title string
+	desc  string
+	id    int
+	prio  int
 }
 
-func main(){
-    p := tea.NewProgram(initalModel())
-    if _, err := p.Run(); err != nil {
-        fmt.Printf(" Alas, there has been an Error: %v", err)
-        os.Exit(1)
-    }
+func (i item) Title() string       { return i.title }
+func (i item) Description() string { return i.desc }
+func (i item) FilterValue() string { return i.title }
+
+type model struct {
+	list list.Model
+}
+
+func main() {
+	p := tea.NewProgram(initalModel(), tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		fmt.Printf(" Alas, there has been an Error: %v", err)
+		os.Exit(1)
+	}
 }
 
 func initalModel() model {
-	return model{
-		choices:  []string{"buy duplos", "buy pasta", "buy pesto"},
-		selected: make(map[int]struct{}),
+	items := []list.Item{
+		item{title: "learn Go", desc: "Try to learn some Golang", id: 1, prio: 3},
+		item{title: "learn Rust", desc: "Try to learn some Rust", id: 2, prio: 2},
+		item{title: "do some Leetcode", desc: "do some Leetcode Problems", id: 3, prio: 3},
 	}
+    m := model{list: list.New(items, list.NewDefaultDelegate(), 0, 0)}
+    m.list.Title = "ToDo"
+
+	return m 
 }
 
 func (m model) Init() tea.Cmd {
@@ -35,50 +52,19 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
+		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
-        case "up", "k":
-            if m.cursor > 0 {
-                m.cursor--
-            }
-        case "down", "j":
-            if m.cursor < len(m.choices)-1 {
-                m.cursor++
-            }
-        case "enter", " ":
-            _, ok := m.selected[m.cursor]
-            if ok {
-                delete(m.selected, m.cursor)
-            } else {
-                m.selected[m.cursor] = struct{}{}
-            }
-
-
 		}
+	case tea.WindowSizeMsg:
+		height, width := docStyle.GetFrameSize()
+		m.list.SetSize(msg.Width-height, msg.Height-width)
+
 	}
-    return m, nil
+	var cmd tea.Cmd
+	m.list, cmd = m.list.Update(msg)
+	return m, cmd
 }
 
 func (m model) View() string {
-    s := "What i need to buy\n\n"
-
-    for i, choices := range m.choices {
-        cursor := " "
-        if m.cursor == i {
-            cursor = ">"
-        }
-
-        checked := " "
-        if _, ok := m.selected[i]; ok {
-            checked = "x"
-        }
-
-        s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choices)
-    }
-
-    s += "\nPress q to quit.\n"
-
-    return s
-
+	return docStyle.Render(m.list.View())
 }
