@@ -10,6 +10,18 @@ import (
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
+var modelStyle = lipgloss.NewStyle()
+var focusedModelStyle = lipgloss.NewStyle()
+
+
+type status int
+
+const (
+	todo status = iota
+	inProgress
+	done
+)
+
 type item struct {
 	title string
 	desc  string
@@ -22,7 +34,8 @@ func (i item) Description() string { return i.desc }
 func (i item) FilterValue() string { return i.title }
 
 type model struct {
-	list list.Model
+	list    []list.Model
+	focused status
 }
 
 func main() {
@@ -39,10 +52,13 @@ func initalModel() model {
 		item{title: "learn Rust", desc: "Try to learn some Rust", id: 2, prio: 2},
 		item{title: "do some Leetcode", desc: "do some Leetcode Problems", id: 3, prio: 3},
 	}
-    m := model{list: list.New(items, list.NewDefaultDelegate(), 0, 0)}
-    m.list.Title = "ToDo"
+	m := model{list: []list.Model{list.New(items, list.NewDefaultDelegate(), 0, 0), list.New(items, list.NewDefaultDelegate(), 0, 0), list.New(items, list.NewDefaultDelegate(), 0, 0)}}
+	m.list[todo].Title = "ToDo"
+	m.list[inProgress].Title = "In Progress"
+	m.list[done].Title = "Done"
+    m.focused = 0
 
-	return m 
+	return m
 }
 
 func (m model) Init() tea.Cmd {
@@ -50,6 +66,7 @@ func (m model) Init() tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+    var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
@@ -57,14 +74,28 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		height, width := docStyle.GetFrameSize()
-		m.list.SetSize(msg.Width-height, msg.Height-width)
+		for i := range m.list {
+			m.list[i].SetSize(msg.Width-height, msg.Height-width)
+		}
 
 	}
 	var cmd tea.Cmd
-	m.list, cmd = m.list.Update(msg)
-	return m, cmd
+
+	for i := range m.list {
+		m.list[i], cmd = m.list[i].Update(msg)
+        cmds = append(cmds, cmd)
+	}
+	return m, tea.Batch(cmds...)
 }
 
 func (m model) View() string {
-	return docStyle.Render(m.list.View())
+	var views []string
+	for i := range m.list {
+        if int(m.focused) == i{
+            views = append(views, focusedModelStyle.Render(m.list[i].View()))
+        } else {
+            views = append(views, modelStyle.Render(m.list[i].View()))
+        }
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Center, views...) + "\n\n"
 }
