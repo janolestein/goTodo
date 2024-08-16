@@ -10,9 +10,14 @@ import (
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
-var modelStyle = lipgloss.NewStyle()
-var focusedModelStyle = lipgloss.NewStyle()
-
+var modelStyle = lipgloss.NewStyle().
+	Margin(1, 2).
+    Padding(1,1).
+    Border(lipgloss.HiddenBorder())
+var focusedModelStyle = lipgloss.NewStyle().
+	Margin(1, 2).
+    Padding(1,1).
+	Border(lipgloss.RoundedBorder())
 
 type status int
 
@@ -52,11 +57,13 @@ func initalModel() model {
 		item{title: "learn Rust", desc: "Try to learn some Rust", id: 2, prio: 2},
 		item{title: "do some Leetcode", desc: "do some Leetcode Problems", id: 3, prio: 3},
 	}
-	m := model{list: []list.Model{list.New(items, list.NewDefaultDelegate(), 0, 0), list.New(items, list.NewDefaultDelegate(), 0, 0), list.New(items, list.NewDefaultDelegate(), 0, 0)}}
+    defList := list.New(items, list.NewDefaultDelegate(),0,0)
+    defList.SetShowHelp(false)
+	m := model{list: []list.Model{defList, defList, defList}}
 	m.list[todo].Title = "ToDo"
 	m.list[inProgress].Title = "In Progress"
 	m.list[done].Title = "Done"
-    m.focused = 0
+	m.focused = 0
 
 	return m
 }
@@ -65,17 +72,41 @@ func (m model) Init() tea.Cmd {
 	return nil
 }
 
+func (m *model) goToNext() {
+	if m.focused == done {
+		m.focused = todo
+	} else {
+		m.focused++
+	}
+}
+
+func (m *model) goToPrev() {
+	if m.focused == todo {
+		m.focused = done
+	} else {
+		m.focused--
+	}
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-    var cmds []tea.Cmd
+	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if msg.String() == "ctrl+c" {
+		switch msg.String() {
+
+		case "ctrl+c", "q":
 			return m, tea.Quit
+
+		case "right", "l":
+            m.goToNext()
+        case "left", "h":
+            m.goToPrev()
 		}
+
 	case tea.WindowSizeMsg:
-		height, width := docStyle.GetFrameSize()
+		height, width := focusedModelStyle.GetFrameSize()
 		for i := range m.list {
-			m.list[i].SetSize(msg.Width-height, msg.Height-width)
+			m.list[i].SetSize(msg.Width-width, msg.Height-height)
 		}
 
 	}
@@ -83,7 +114,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	for i := range m.list {
 		m.list[i], cmd = m.list[i].Update(msg)
-        cmds = append(cmds, cmd)
+		cmds = append(cmds, cmd)
 	}
 	return m, tea.Batch(cmds...)
 }
@@ -91,11 +122,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() string {
 	var views []string
 	for i := range m.list {
-        if int(m.focused) == i{
-            views = append(views, focusedModelStyle.Render(m.list[i].View()))
-        } else {
-            views = append(views, modelStyle.Render(m.list[i].View()))
-        }
+		if int(m.focused) == i {
+			views = append(views, focusedModelStyle.Render(m.list[i].View()))
+		} else {
+			views = append(views, modelStyle.Render(m.list[i].View()))
+		}
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Center, views...) + "\n\n"
 }
