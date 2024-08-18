@@ -1,4 +1,4 @@
-package addForm
+package main
 
 import (
 	// "fmt"
@@ -11,28 +11,18 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-var models *[]tea.Model
-
-var modelStyle = lipgloss.NewStyle().
-	Margin(1, 2).
-	Padding(1, 1).
-	Border(lipgloss.HiddenBorder())
-var focusedModelStyle = lipgloss.NewStyle().
-	Margin(1, 2).
-	Padding(1, 1).
-	Border(lipgloss.RoundedBorder())
 
 type Form struct {
 	title textinput.Model
 	desc  textarea.Model
 }
 
-func NewForm(allModels *[]tea.Model) *Form {
-	models = allModels
+func NewForm() *Form {
 	form := &Form{}
 	form.title = textinput.New()
 	form.title.Focus()
 	form.desc = textarea.New()
+    models = append(models, form)
 	return form
 }
 
@@ -53,8 +43,10 @@ func (form Form) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				form.desc.Focus()
 				return form, textarea.Blink
 			} else {
-				(*models)[1] = form
-				return (*models)[0], nil
+				models[inputModel] = form
+                // title := form.title.Value()
+                // desc := form.desc.Value()
+				return models[listModel], nil
 			}
 		}
 	}

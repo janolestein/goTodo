@@ -6,7 +6,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"os"
-    "goTodo/addForm"
 )
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
@@ -51,12 +50,14 @@ func (i item) FilterValue() string { return i.title }
 type model struct {
 	list    []list.Model
 	focused status
+    width int
+    height int
 }
 
 func main() {
     list := initalModel()
     models = append(models, list)
-    form := addForm.NewForm(&models)
+    form :=  NewForm()
     models = append(models, form)
     m := models[listModel]
 	p := tea.NewProgram(m, tea.WithAltScreen())
@@ -123,8 +124,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.WindowSizeMsg:
 		height, width := focusedModelStyle.GetFrameSize()
+        m.width = width
+        m.height = height
 		for i := range m.list {
-			m.list[i].SetSize(msg.Width-width, msg.Height-height)
+			m.list[i].SetSize(msg.Width, msg.Height-height)
 		}
 
 	}
@@ -147,5 +150,7 @@ func (m model) View() string {
 			views = append(views, modelStyle.Render(m.list[i].View()))
 		}
 	}
-	return lipgloss.JoinHorizontal(lipgloss.Center, views...) + "\n\n"
+    s := lipgloss.JoinHorizontal(lipgloss.Center, views...) + "\n\n"
+
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, s)
 }
