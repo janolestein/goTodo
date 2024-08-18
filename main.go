@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"os"
+    "goTodo/addForm"
 )
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
@@ -18,6 +19,15 @@ var focusedModelStyle = lipgloss.NewStyle().
 	Margin(1, 2).
     Padding(1,1).
 	Border(lipgloss.RoundedBorder())
+
+type focusedModel int 
+
+const(
+    listModel focusedModel = iota
+    inputModel
+)
+
+var models []tea.Model
 
 type status int
 
@@ -44,7 +54,12 @@ type model struct {
 }
 
 func main() {
-	p := tea.NewProgram(initalModel(), tea.WithAltScreen())
+    list := initalModel()
+    models = append(models, list)
+    form := addForm.NewForm(&models)
+    models = append(models, form)
+    m := models[listModel]
+	p := tea.NewProgram(m, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf(" Alas, there has been an Error: %v", err)
 		os.Exit(1)
@@ -89,7 +104,7 @@ func (m *model) goToPrev() {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmds []tea.Cmd
+	// var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -101,6 +116,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             m.goToNext()
         case "left", "h":
             m.goToPrev()
+        case "n":
+            models[listModel] = m
+            return models[inputModel], nil 
 		}
 
 	case tea.WindowSizeMsg:
@@ -112,11 +130,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	var cmd tea.Cmd
 
-	for i := range m.list {
-		m.list[i], cmd = m.list[i].Update(msg)
-		cmds = append(cmds, cmd)
-	}
-	return m, tea.Batch(cmds...)
+    m.list[m.focused], cmd = m.list[m.focused].Update(msg)
+	// for i := range m.list {
+	// 	m.list[i], cmd = m.list[i].Update(msg)
+	// 	cmds = append(cmds, cmd)
+	// }
+	return m, cmd
 }
 
 func (m model) View() string {
