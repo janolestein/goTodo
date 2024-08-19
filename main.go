@@ -26,7 +26,7 @@ const(
     inputModel
 )
 
-var models []tea.Model
+var kanbanModel *model
 
 type status int
 
@@ -55,12 +55,9 @@ type model struct {
 }
 
 func main() {
-    list := initalModel()
-    models = append(models, list)
-    form :=  NewForm()
-    models = append(models, form)
-    m := models[listModel]
-	p := tea.NewProgram(m, tea.WithAltScreen())
+    lists := initalModel()
+    kanbanModel = &lists
+	p := tea.NewProgram(lists, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf(" Alas, there has been an Error: %v", err)
 		os.Exit(1)
@@ -104,6 +101,7 @@ func (m *model) goToPrev() {
 	}
 }
 
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// var cmds []tea.Cmd
 	switch msg := msg.(type) {
@@ -118,8 +116,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         case "left", "h":
             m.goToPrev()
         case "n":
-            models[listModel] = m
-            return models[inputModel], nil 
+            return NewForm(), nil 
 		}
 
 	case tea.WindowSizeMsg:

@@ -1,16 +1,22 @@
 package main
 
 import (
-	// "fmt"
-	// "os"
-	//
-	// "github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
+var formStyle = lipgloss.NewStyle().
+	Margin(1, 2).
+    Padding(1,1).
+    Width(50).
+    Border(lipgloss.HiddenBorder())
+var focusedFormStyle = lipgloss.NewStyle().
+	Margin(1, 2).
+    Padding(1,1).
+    Width(50).
+	Border(lipgloss.RoundedBorder())
 
 type Form struct {
 	title textinput.Model
@@ -22,7 +28,6 @@ func NewForm() *Form {
 	form.title = textinput.New()
 	form.title.Focus()
 	form.desc = textarea.New()
-    models = append(models, form)
 	return form
 }
 
@@ -37,16 +42,22 @@ func (form Form) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return form, tea.Quit
+        case "esc":
+            return kanbanModel, nil
 		case "enter":
 			if form.title.Focused() {
 				form.title.Blur()
 				form.desc.Focus()
 				return form, textarea.Blink
 			} else {
-				models[inputModel] = form
-                // title := form.title.Value()
-                // desc := form.desc.Value()
-				return models[listModel], nil
+                title := form.title.Value()
+                desc := form.desc.Value()
+                if title != "" {
+                insertCmd := kanbanModel.list[todo].InsertItem(len(kanbanModel.list[todo].Items()), item{title: title, desc: desc, prio: 0, id: 0})
+				return kanbanModel, insertCmd 
+                } else {
+                    return kanbanModel, nil
+                }
 			}
 		}
 	}
@@ -60,5 +71,9 @@ func (form Form) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (form Form) View() string {
-	return lipgloss.JoinVertical(lipgloss.Center, focusedModelStyle.Render(form.title.View()), focusedModelStyle.Render(form.desc.View()))
+    if form.title.Focused() {
+	return lipgloss.JoinVertical(lipgloss.Center, "Please Enter a New Task\n", focusedFormStyle.Render(form.title.View()), formStyle.Render(form.desc.View()))
+    } else {
+	return lipgloss.JoinVertical(lipgloss.Center, "Please Enter a New Task\n", formStyle.Render(form.title.View()), focusedFormStyle.Render(form.desc.View()))
+    }
 }
