@@ -61,6 +61,8 @@ type model struct {
 }
 
 func main() {
+    f, _ := tea.LogToFile("debug.log", "debug")
+    defer f.Close()
 	lists := initalModel()
 	kanbanModel = &lists
 	p := tea.NewProgram(lists, tea.WithAltScreen())
@@ -123,6 +125,7 @@ func (m *model) moveToNext() tea.Msg {
 		}
 	}
     m.goToNext()
+    m.Update(nil)
 	return nil
 }
 
@@ -153,8 +156,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	}
-	var cmd tea.Cmd
-
+	// var cmds []tea.Cmd
+	//
+ //    for i := range m.list {
+ //        var cmd tea.Cmd
+ //        m.list[i], cmd = m.list[i].Update(msg)
+ //        cmds = append(cmds, cmd)
+ //    }
+    var cmd tea.Cmd
 	m.list[m.focused], cmd = m.list[m.focused].Update(msg)
 	return m, cmd
 }
