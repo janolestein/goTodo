@@ -180,9 +180,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			//    }
 			//          return m, tea.Batch(cmds...)
 		case "d":
-            kanbanModel = &m
-            return NewConfirmForm(), nil
-			// m.list[m.focused].RemoveItem(m.list[m.focused].Index())
+			if m.list[m.focused].SelectedItem() != nil {
+
+				kanbanModel = &m
+				return NewConfirmForm(), nil
+				// m.list[m.focused].RemoveItem(m.list[m.focused].Index())
+			}
 		}
 
 	case tea.WindowSizeMsg:
