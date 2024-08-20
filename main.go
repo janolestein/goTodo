@@ -17,7 +17,7 @@ var modelStyle = lipgloss.NewStyle().
 var focusedModelStyle = lipgloss.NewStyle().
 	Margin(1, 2).
 	Padding(1, 1).
-    BorderForeground(lipgloss.Color("201")).
+	BorderForeground(lipgloss.Color("201")).
 	Border(lipgloss.RoundedBorder())
 
 type focusedModel int
@@ -30,7 +30,6 @@ const (
 var kanbanModel *model
 
 type confirmDeleteMsg bool
-
 
 type status int
 
@@ -141,6 +140,10 @@ func (m *model) moveToNext() tea.Msg {
 	return nil
 }
 
+func (m *model) ConfirmDelete() tea.Msg {
+	m.list[m.focused].RemoveItem(m.list[m.focused].Index())
+	return nil
+}
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -175,21 +178,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			//        m.list[i], cmd = m.list[i].Update(msg)
 			//        cmds = append(cmds, cmd)
 			//    }
-   //          return m, tea.Batch(cmds...)
-        case "d":
-            m.list[m.focused].RemoveItem(m.list[m.focused].Index())
+			//          return m, tea.Batch(cmds...)
+		case "d":
+            kanbanModel = &m
+            return NewConfirmForm(), nil
+			// m.list[m.focused].RemoveItem(m.list[m.focused].Index())
 		}
 
 	case tea.WindowSizeMsg:
 		height, width := focusedModelStyle.GetFrameSize()
 		m.width = width
 		m.height = height
-        focusedModelStyle.MarginTop(height / 2)
-        modelStyle.MarginTop(height / 2)
-        focusedModelStyle.MarginLeft(width / 2)
-        modelStyle.MarginLeft(width / 2)
+		focusedModelStyle.MarginTop(height / 2)
+		modelStyle.MarginTop(height / 2)
+		focusedModelStyle.MarginLeft(width / 2)
+		modelStyle.MarginLeft(width / 2)
 		for i := range m.list {
-			m.list[i].SetSize(msg.Width, msg.Height / 2)
+			m.list[i].SetSize(msg.Width, msg.Height/2)
 		}
 
 	}

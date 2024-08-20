@@ -12,6 +12,7 @@ type ConfirmForm struct {
 func NewConfirmForm() *ConfirmForm {
 	form := &ConfirmForm{}
 	form.title = textinput.New()
+    form.title.Focus()
 	form.title.Placeholder = "y/n"
 	return form
 }
@@ -31,9 +32,10 @@ func (form ConfirmForm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return kanbanModel, nil
 		case "enter":
 			if form.title.Value() == "y" {
-
-				// return kanbanModel, confirmDelete
-			}
+				return kanbanModel, kanbanModel.ConfirmDelete
+			} else {
+                return kanbanModel, nil
+            }
 		}
 	}
 	form.title, cmd = form.title.Update(msg)
