@@ -130,11 +130,14 @@ func (m *model) moveToNext() tea.Msg {
 		index := m.list[m.focused].Index()
 		m.list[m.focused].RemoveItem(index)
 		if m.focused == todo {
-			m.list[inProgress].InsertItem(len(m.list[inProgress].Items())-1, selItem)
+			insertcmd := m.list[inProgress].InsertItem(len(m.list[inProgress].Items())-1, selItem)
+			return insertcmd
 		} else if m.focused == inProgress {
-			m.list[done].InsertItem(len(m.list[done].Items())-1, selItem)
+			insertcmd := m.list[done].InsertItem(len(m.list[done].Items())-1, selItem)
+			return insertcmd
 		} else if m.focused == done {
-			m.list[todo].InsertItem(len(m.list[todo].Items())-1, selItem)
+			insertCmd := m.list[todo].InsertItem(len(m.list[todo].Items())-1, selItem)
+			return insertCmd
 		}
 	}
 	return nil
@@ -144,47 +147,44 @@ func (m *model) ConfirmDelete() tea.Msg {
 	m.list[m.focused].RemoveItem(m.list[m.focused].Index())
 	return nil
 }
+
+func (m *model) editTask(editedTask task, index int) tea.Cmd {
+    return func() tea.Msg {
+        editCmd := m.list[m.focused].SetItem(index, editedTask)
+        return editCmd
+    }
+}
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
+		if m.list[m.focused].FilterState() != list.Filtering {
 
-		case "ctrl+c", "q":
-			return m, tea.Quit
+			switch msg.String() {
 
-		case "right", "l":
-			m.goToNext()
-		case "left", "h":
-			m.goToPrev()
-		case "n":
-			return NewForm(), nil
-		case "m":
-			selItem := m.list[m.focused].SelectedItem()
-			if selItem != nil {
-				index := m.list[m.focused].Index()
-				m.list[m.focused].RemoveItem(index)
-				if m.focused == todo {
-					m.list[inProgress].InsertItem(len(m.list[inProgress].Items())-1, selItem)
-				} else if m.focused == inProgress {
-					m.list[done].InsertItem(len(m.list[done].Items())-1, selItem)
-				} else if m.focused == done {
-					m.list[todo].InsertItem(len(m.list[todo].Items())-1, selItem)
-				}
-			}
-			// var cmds []tea.Cmd
-			//
-			//    for i := range m.list {
-			//        var cmd tea.Cmd
-			//        m.list[i], cmd = m.list[i].Update(msg)
-			//        cmds = append(cmds, cmd)
-			//    }
-			//          return m, tea.Batch(cmds...)
-		case "d":
-			if m.list[m.focused].SelectedItem() != nil {
+			case "ctrl+c", "q":
+				return m, tea.Quit
 
+			case "right", "l":
+				m.goToNext()
+			case "left", "h":
+				m.goToPrev()
+			case "n":
 				kanbanModel = &m
-				return NewConfirmForm(), nil
-				// m.list[m.focused].RemoveItem(m.list[m.focused].Index())
+				return NewForm(), nil
+			case "m":
+				return m, m.moveToNext
+			case "d":
+				if m.list[m.focused].SelectedItem() != nil {
+
+					kanbanModel = &m
+					return NewConfirmForm(), nil
+					// m.list[m.focused].RemoveItem(m.list[m.focused].Index())
+				}
+			case "e":
+				if m.list[m.focused].SelectedItem() != nil {
+					kanbanModel = &m
+					return NewEditForm(m.list[m.focused].SelectedItem()), nil
+				}
 			}
 		}
 

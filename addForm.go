@@ -16,6 +16,7 @@ var focusedFormStyle = lipgloss.NewStyle().
 	Margin(1, 2).
     Padding(1,1).
     Width(50).
+	BorderForeground(lipgloss.Color("201")).
 	Border(lipgloss.RoundedBorder())
 
 type Form struct {
