@@ -54,8 +54,7 @@ func (form Form) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
                 title := form.title.Value()
                 desc := form.desc.Value()
                 if title != "" {
-                insertCmd := kanbanModel.list[todo].InsertItem(len(kanbanModel.list[todo].Items()), task{title: title, desc: desc, prio: 0, id: 0})
-				return kanbanModel, insertCmd 
+				return kanbanModel, kanbanModel.newTask(task{title: title, desc: desc, prio: 1, currentStatus: todo}) 
                 } else {
                     return kanbanModel, nil
                 }

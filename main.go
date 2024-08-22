@@ -1,10 +1,12 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	_ "github.com/mattn/go-sqlite3"
 	"os"
 )
 
@@ -27,6 +29,8 @@ const (
 	inputModel
 )
 
+var database *sql.DB
+
 var kanbanModel *model
 
 type confirmDeleteMsg bool
@@ -40,10 +44,11 @@ const (
 )
 
 type task struct {
-	title string
-	desc  string
-	id    int
-	prio  int
+	title         string
+	desc          string
+	id            int
+	prio          int
+	currentStatus status
 }
 
 func (i task) Title() string { return i.title }
@@ -64,6 +69,15 @@ type model struct {
 }
 
 func main() {
+	// Connect to database
+	db, err := sql.Open("sqlite3", "./tasks.db")
+	if err != nil {
+		panic(-1)
+	}
+
+	database = db
+	// defer close
+	defer db.Close()
 	lists := initalModel()
 	kanbanModel = &lists
 	p := tea.NewProgram(lists, tea.WithAltScreen())
@@ -74,30 +88,36 @@ func main() {
 }
 
 func initalModel() model {
-	items1 := []list.Item{
-		task{title: "learn Go", desc: "Try to learn some Golang", id: 1, prio: 3},
-		task{title: "learn Rust", desc: "Try to learn some Rust", id: 2, prio: 2},
-		task{title: "do some Leetcode", desc: "do some Leetcode Problems", id: 3, prio: 3},
+
+	stmt, _ := database.Prepare("CREATE TABLE IF NOT EXISTS tasks (task_id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, desc TEXT, prio INTEGER, status INTEGER NOT NULL)")
+	stmt.Exec()
+	defer stmt.Close()
+	itemsTodo := []list.Item{}
+	itemsInProgress := []list.Item{}
+	itemsDone := []list.Item{}
+
+	tasks, _ := getAllTasks(database)
+
+	for _, v := range tasks {
+
+		switch v.currentStatus {
+		case todo:
+			itemsTodo = append(itemsTodo, v)
+		case inProgress:
+			itemsInProgress = append(itemsInProgress, v)
+		case done:
+			itemsDone = append(itemsDone, v)
+		}
 	}
-	items2 := []list.Item{
-		task{title: "sjdkfhsd", desc: "sfjsdlfjsdklj", id: 1, prio: 3},
-		task{title: "learn Rust", desc: "sdklfjsdk", id: 2, prio: 2},
-		task{title: "kfsjdkjcxvb", desc: "ksldjf", id: 3, prio: 3},
-	}
-	items3 := []list.Item{
-		task{title: "rwueor", desc: "wueiprt", id: 1, prio: 3},
-		task{title: "348975348", desc: "ksdchrgb", id: 2, prio: 2},
-		task{title: "348hjeskhf", desc: "dfhosbajskbcasb", id: 3, prio: 3},
-	}
-	defList1 := list.New(items1, list.NewDefaultDelegate(), 0, 0)
-	defList2 := list.New(items2, list.NewDefaultDelegate(), 0, 0)
-	defList3 := list.New(items3, list.NewDefaultDelegate(), 0, 0)
+	defList1 := list.New(itemsTodo, list.NewDefaultDelegate(), 0, 0)
+	defList2 := list.New(itemsInProgress, list.NewDefaultDelegate(), 0, 0)
+	defList3 := list.New(itemsDone, list.NewDefaultDelegate(), 0, 0)
 	// defList.SetShowHelp(false)
 	m := model{list: []list.Model{defList1, defList2, defList3}}
 	m.list[todo].Title = "ToDo"
 	m.list[inProgress].Title = "In Progress"
 	m.list[done].Title = "Done"
-	m.focused = 0
+	m.focused = todo
 
 	return m
 }
@@ -149,10 +169,18 @@ func (m *model) ConfirmDelete() tea.Msg {
 }
 
 func (m *model) editTask(editedTask task, index int) tea.Cmd {
-    return func() tea.Msg {
-        editCmd := m.list[m.focused].SetItem(index, editedTask)
-        return editCmd
-    }
+	return func() tea.Msg {
+		editCmd := m.list[m.focused].SetItem(index, editedTask)
+		return editCmd
+	}
+}
+
+func (m *model) newTask(newTask task) tea.Cmd {
+	return func() tea.Msg {
+		go insertNewTask(database, newTask)
+		insertCmd := kanbanModel.list[todo].InsertItem(len(kanbanModel.list[todo].Items()), newTask)
+		return insertCmd
+	}
 }
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
