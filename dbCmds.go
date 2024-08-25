@@ -32,3 +32,18 @@ func insertNewTask(db *sql.DB, newTask task) error {
     defer stmt.Close()
     return err
 }
+func deleteTask(db *sql.DB, id int) error {
+
+    stmt, err := db.Prepare("DELETE FROM tasks WHERE task_id = (?)")
+    stmt.Exec(id)
+    defer stmt.Close()
+    return err
+}
+
+func updateTask(db *sql.DB, taskToUpdate task) error {
+
+    stmt, err := db.Prepare("UPDATE tasks SET title = ?, desc = ?, status = ? WHERE task_id = ?")
+    stmt.Exec(taskToUpdate.title, taskToUpdate.desc, taskToUpdate.currentStatus, taskToUpdate.id)
+    defer stmt.Close()
+    return err
+}

@@ -3,11 +3,12 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"os"
+
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	_ "github.com/mattn/go-sqlite3"
-	"os"
 )
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
@@ -144,18 +145,24 @@ func (m *model) goToPrev() {
 
 func (m *model) moveToNext() tea.Msg {
 
-	selItem := m.list[m.focused].SelectedItem()
-	if selItem != nil {
-		selItem = selItem.(task)
+	sel := m.list[m.focused].SelectedItem()
+	if sel != nil {
+		selItem := sel.(task)
 		index := m.list[m.focused].Index()
 		m.list[m.focused].RemoveItem(index)
 		if m.focused == todo {
+			selItem.currentStatus = inProgress
+            go updateTask(database, selItem)
 			insertcmd := m.list[inProgress].InsertItem(len(m.list[inProgress].Items())-1, selItem)
 			return insertcmd
 		} else if m.focused == inProgress {
+			selItem.currentStatus = done 
+            go updateTask(database, selItem)
 			insertcmd := m.list[done].InsertItem(len(m.list[done].Items())-1, selItem)
 			return insertcmd
 		} else if m.focused == done {
+			selItem.currentStatus = todo 
+            go updateTask(database, selItem)
 			insertCmd := m.list[todo].InsertItem(len(m.list[todo].Items())-1, selItem)
 			return insertCmd
 		}
@@ -164,13 +171,17 @@ func (m *model) moveToNext() tea.Msg {
 }
 
 func (m *model) ConfirmDelete() tea.Msg {
+	t := m.list[m.focused].SelectedItem()
+	taskToDelete := t.(task)
 	m.list[m.focused].RemoveItem(m.list[m.focused].Index())
+	go deleteTask(database, taskToDelete.id)
 	return nil
 }
 
 func (m *model) editTask(editedTask task, index int) tea.Cmd {
 	return func() tea.Msg {
 		editCmd := m.list[m.focused].SetItem(index, editedTask)
+		go updateTask(database, editedTask)
 		return editCmd
 	}
 }
