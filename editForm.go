@@ -46,8 +46,8 @@ func (form editForm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				title := form.title.Value()
 				desc := form.desc.Value()
-                newTask := task{title: title, desc: desc, id: form.itemToEdit.(task).id, prio: form.itemToEdit.(task).prio}
-                index := kanbanModel.list[kanbanModel.focused].Index()
+				newTask := task{title: title, desc: desc, id: form.itemToEdit.(task).id, prio: form.itemToEdit.(task).prio, currentStatus: form.itemToEdit.(task).currentStatus}
+				index := kanbanModel.list[kanbanModel.focused].Index()
 				return kanbanModel, kanbanModel.editTask(newTask, index)
 			}
 		}
@@ -62,9 +62,12 @@ func (form editForm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (form editForm) View() string {
-    if form.title.Focused() {
-	return lipgloss.JoinVertical(lipgloss.Center, "Please Enter want you want to change\n", focusedFormStyle.Render(form.title.View()), formStyle.Render(form.desc.View()))
-    } else {
-	return lipgloss.JoinVertical(lipgloss.Center, "Please Enter want you want to change\n", formStyle.Render(form.title.View()), focusedFormStyle.Render(form.desc.View()))
-    }
+	var s string
+	if form.title.Focused() {
+		s = lipgloss.JoinVertical(lipgloss.Center, "Please Enter want you want to change\n", focusedFormStyle.Render(form.title.View()), formStyle.Render(form.desc.View()))
+		return lipgloss.Place(kanbanModel.width, kanbanModel.height, lipgloss.Center, lipgloss.Center, s)
+	} else {
+		s = lipgloss.JoinVertical(lipgloss.Center, "Please Enter want you want to change\n", formStyle.Render(form.title.View()), focusedFormStyle.Render(form.desc.View()))
+		return lipgloss.Place(kanbanModel.width, kanbanModel.height, lipgloss.Center, lipgloss.Center, s)
+	}
 }

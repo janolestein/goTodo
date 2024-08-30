@@ -71,7 +71,8 @@ type model struct {
 
 func main() {
 	// Connect to database
-	db, err := sql.Open("sqlite3", "./tasks.db")
+	dirname, err := os.UserHomeDir()
+	db, err := sql.Open("sqlite3", dirname + "/taskDB/tasks.db")
 	if err != nil {
 		panic(-1)
 	}
@@ -90,7 +91,11 @@ func main() {
 
 func initalModel() model {
 
-	stmt, _ := database.Prepare("CREATE TABLE IF NOT EXISTS tasks (task_id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, desc TEXT, prio INTEGER, status INTEGER NOT NULL)")
+	stmt, err := database.Prepare("CREATE TABLE IF NOT EXISTS tasks (task_id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, desc TEXT, prio INTEGER, status INTEGER NOT NULL)")
+    if err != nil {
+        fmt.Println("Database could not be created")
+        panic(-1)
+    }
 	stmt.Exec()
 	defer stmt.Close()
 	itemsTodo := []list.Item{}
@@ -111,9 +116,11 @@ func initalModel() model {
 		}
 	}
 	defList1 := list.New(itemsTodo, list.NewDefaultDelegate(), 0, 0)
+	defList1.SetShowHelp(false)
 	defList2 := list.New(itemsInProgress, list.NewDefaultDelegate(), 0, 0)
+	defList2.SetShowHelp(false)
 	defList3 := list.New(itemsDone, list.NewDefaultDelegate(), 0, 0)
-	// defList.SetShowHelp(false)
+	defList3.SetShowHelp(false)
 	m := model{list: []list.Model{defList1, defList2, defList3}}
 	m.list[todo].Title = "ToDo"
 	m.list[inProgress].Title = "In Progress"
@@ -152,17 +159,17 @@ func (m *model) moveToNext() tea.Msg {
 		m.list[m.focused].RemoveItem(index)
 		if m.focused == todo {
 			selItem.currentStatus = inProgress
-            go updateTask(database, selItem)
+			go updateTask(database, selItem)
 			insertcmd := m.list[inProgress].InsertItem(len(m.list[inProgress].Items())-1, selItem)
 			return insertcmd
 		} else if m.focused == inProgress {
-			selItem.currentStatus = done 
-            go updateTask(database, selItem)
+			selItem.currentStatus = done
+			go updateTask(database, selItem)
 			insertcmd := m.list[done].InsertItem(len(m.list[done].Items())-1, selItem)
 			return insertcmd
 		} else if m.focused == done {
-			selItem.currentStatus = todo 
-            go updateTask(database, selItem)
+			selItem.currentStatus = todo
+			go updateTask(database, selItem)
 			insertCmd := m.list[todo].InsertItem(len(m.list[todo].Items())-1, selItem)
 			return insertCmd
 		}
@@ -228,25 +235,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.WindowSizeMsg:
-		height, width := focusedModelStyle.GetFrameSize()
-		m.width = width
-		m.height = height
-		focusedModelStyle.MarginTop(height / 2)
-		modelStyle.MarginTop(height / 2)
-		focusedModelStyle.MarginLeft(width / 2)
-		modelStyle.MarginLeft(width / 2)
+		// height, width := focusedModelStyle.GetFrameSize()
+		m.width = msg.Width
+		m.height = msg.Height
 		for i := range m.list {
-			m.list[i].SetSize(msg.Width, msg.Height/2)
+			m.list[i].SetSize(msg.Width*4, msg.Height/2)
 		}
 
 	}
-	// var cmds []tea.Cmd
-	//
-	//    for i := range m.list {
-	//        var cmd tea.Cmd
-	//        m.list[i], cmd = m.list[i].Update(msg)
-	//        cmds = append(cmds, cmd)
-	//    }
 	var cmd tea.Cmd
 	m.list[m.focused], cmd = m.list[m.focused].Update(msg)
 	return m, cmd
@@ -262,6 +258,7 @@ func (m model) View() string {
 		}
 	}
 	s := lipgloss.JoinHorizontal(lipgloss.Center, views...) + "\n\n"
+	s = lipgloss.JoinVertical(lipgloss.Center, s, m.list[m.focused].Help.View(keys))
 
-	return lipgloss.Place(m.width, m.height, lipgloss.Right, lipgloss.Bottom, s)
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, s)
 }

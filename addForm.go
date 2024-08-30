@@ -9,13 +9,13 @@ import (
 
 var formStyle = lipgloss.NewStyle().
 	Margin(1, 2).
-    Padding(1,1).
-    Width(50).
-    Border(lipgloss.HiddenBorder())
+	Padding(1, 1).
+	Width(50).
+	Border(lipgloss.HiddenBorder())
 var focusedFormStyle = lipgloss.NewStyle().
 	Margin(1, 2).
-    Padding(1,1).
-    Width(50).
+	Padding(1, 1).
+	Width(50).
 	BorderForeground(lipgloss.Color("201")).
 	Border(lipgloss.RoundedBorder())
 
@@ -43,21 +43,21 @@ func (form Form) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return form, tea.Quit
-        case "esc":
-            return kanbanModel, nil
+		case "esc":
+			return kanbanModel, nil
 		case "enter":
 			if form.title.Focused() {
 				form.title.Blur()
 				form.desc.Focus()
 				return form, textarea.Blink
 			} else {
-                title := form.title.Value()
-                desc := form.desc.Value()
-                if title != "" {
-				return kanbanModel, kanbanModel.newTask(task{title: title, desc: desc, prio: 1, currentStatus: todo}) 
-                } else {
-                    return kanbanModel, nil
-                }
+				title := form.title.Value()
+				desc := form.desc.Value()
+				if title != "" {
+					return kanbanModel, kanbanModel.newTask(task{title: title, desc: desc, prio: 1, currentStatus: todo})
+				} else {
+					return kanbanModel, nil
+				}
 			}
 		}
 	}
@@ -71,9 +71,12 @@ func (form Form) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (form Form) View() string {
-    if form.title.Focused() {
-	return lipgloss.JoinVertical(lipgloss.Center, "Please Enter a New Task\n", focusedFormStyle.Render(form.title.View()), formStyle.Render(form.desc.View()))
-    } else {
-	return lipgloss.JoinVertical(lipgloss.Center, "Please Enter a New Task\n", formStyle.Render(form.title.View()), focusedFormStyle.Render(form.desc.View()))
-    }
+	var s string
+	if form.title.Focused() {
+		s = lipgloss.JoinVertical(lipgloss.Center, "Please Enter a New Task\n", focusedFormStyle.Render(form.title.View()), formStyle.Render(form.desc.View()))
+		return lipgloss.Place(kanbanModel.width, kanbanModel.height, lipgloss.Center, lipgloss.Center, s)
+	} else {
+		s = lipgloss.JoinVertical(lipgloss.Center, "Please Enter a New Task\n", formStyle.Render(form.title.View()), focusedFormStyle.Render(form.desc.View()))
+		return lipgloss.Place(kanbanModel.width, kanbanModel.height, lipgloss.Center, lipgloss.Center, s)
+	}
 }
