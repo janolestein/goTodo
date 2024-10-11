@@ -72,8 +72,11 @@ type model struct {
 func main() {
 	// Connect to database
 	dirname, err := os.UserHomeDir()
-	db, err := sql.Open("sqlite3", dirname + "/taskDB/tasks.db")
+	os.MkdirAll(dirname + "/todoDB/uni", 0755)
+	os.Create(dirname + "/todoDB/uni/tasks.db")
+	db, err := sql.Open("sqlite3", dirname+"/todoDB/tasks.db")
 	if err != nil {
+		fmt.Println(err)
 		panic(-1)
 	}
 
@@ -92,10 +95,11 @@ func main() {
 func initalModel() model {
 
 	stmt, err := database.Prepare("CREATE TABLE IF NOT EXISTS tasks (task_id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, desc TEXT, prio INTEGER, status INTEGER NOT NULL)")
-    if err != nil {
-        fmt.Println("Database could not be created")
-        panic(-1)
-    }
+	if err != nil {
+		fmt.Println("Database could not be created")
+		fmt.Println(err)
+		panic(-1)
+	}
 	stmt.Exec()
 	defer stmt.Close()
 	itemsTodo := []list.Item{}
